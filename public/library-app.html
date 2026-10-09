@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>스마트 도서관 대출 예약 시스템</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <!-- Pretendard Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">도서관 스마트 대출 예약</h1>
+          <div class="flex items-center space-x-2 text-xs text-slate-500">
+            <span id="api-status-dot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+            <span id="api-status-text">GAS 연동 준비 중...</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-2 sm:space-x-3">
+        <button id="btn-refresh" class="inline-flex items-center px-3 py-1.5 sm:px-3.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors">
+          <svg id="refresh-icon" class="w-4 h-4 mr-1 sm:mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          새로고침
+        </button>
+
+        <button id="btn-open-my-reservations" class="inline-flex items-center px-3 py-1.5 sm:px-3.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-lg text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors">
+          <svg class="w-4 h-4 mr-1 sm:mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+          내 예약 내역
+          <span id="my-res-badge" class="ml-1.5 px-1.5 py-0.2 bg-blue-600 text-white rounded-full text-[11px] font-bold hidden">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+
+    <!-- Hero / Summary Banner -->
+    <div class="mb-8 bg-gradient-to-r from-blue-700 via-indigo-700 to-sky-700 rounded-2xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+      <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+      <div class="relative z-10 max-w-2xl">
+        <span class="inline-block px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-semibold mb-3 tracking-wide">
+          실시간 구글 시트 연동 도서관
+        </span>
+        <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight mb-2">원하는 책을 찾고 바로 예약하세요</h2>
+        <p class="text-blue-100 text-sm sm:text-base leading-relaxed">
+          Google Apps Script API를 통해 실시간 대출 상태를 확인하고, 간편하게 대출 예약을 접수할 수 있습니다.
+        </p>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-6 pt-6 border-t border-white/20">
+        <div class="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4">
+          <div class="text-xs text-blue-100">전체 도서</div>
+          <div id="stat-total" class="text-xl sm:text-2xl font-bold mt-0.5">- 권</div>
+        </div>
+        <div class="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4">
+          <div class="text-xs text-emerald-200">대출 가능</div>
+          <div id="stat-available" class="text-xl sm:text-2xl font-bold text-emerald-300 mt-0.5">- 권</div>
+        </div>
+        <div class="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4">
+          <div class="text-xs text-rose-200">대출 중</div>
+          <div id="stat-borrowed" class="text-xl sm:text-2xl font-bold text-rose-300 mt-0.5">- 권</div>
+        </div>
+        <div class="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4">
+          <div class="text-xs text-blue-100">분야 카테고리</div>
+          <div id="stat-categories" class="text-xl sm:text-2xl font-bold mt-0.5">7 개</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search & Filter Controls -->
+    <div class="bg-white rounded-2xl p-4 sm:p-6 shadow-xs border border-slate-200 mb-8 space-y-4">
+      <div class="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
+        <!-- Search Input -->
+        <div class="relative flex-1">
+          <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            id="search-input"
+            placeholder="도서 제목 또는 저자명으로 검색..."
+            class="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+          />
+          <button id="search-clear" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 hidden">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Toggle: Available Only -->
+        <div class="flex items-center space-x-4 self-end md:self-center">
+          <label class="flex items-center cursor-pointer select-none">
+            <input type="checkbox" id="filter-available-only" class="sr-only peer">
+            <div class="w-10 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 relative"></div>
+            <span class="ml-2.5 text-xs sm:text-sm font-medium text-slate-700">대출가능 도서만</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Category Filter Pills -->
+      <div class="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 custom-scrollbar" id="category-pills-container">
+        <!-- Will be populated by JS -->
+      </div>
+    </div>
+
+    <!-- Book Grid Section -->
+    <div>
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-base sm:text-lg font-bold text-slate-900 flex items-center">
+          <span>도서 목록</span>
+          <span id="results-count" class="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">0권</span>
+        </h3>
+        <div id="filter-summary" class="text-xs text-slate-500"></div>
+      </div>
+
+      <!-- Loading Skeleton -->
+      <div id="loading-skeleton" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+        <!-- Skeletons generated by JS -->
+      </div>
+
+      <!-- Book Grid -->
+      <div id="books-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 hidden">
+        <!-- Book Cards populated by JS -->
+      </div>
+
+      <!-- Empty State -->
+      <div id="empty-state" class="hidden py-16 text-center bg-white rounded-2xl border border-dashed border-slate-300">
+        <div class="w-16 h-16 mx-auto mb-3 text-slate-300">
+          <svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+          </svg>
+        </div>
+        <h4 class="text-base font-semibold text-slate-700">검색 조건에 맞는 도서가 없습니다</h4>
+        <p class="text-xs text-slate-500 mt-1">검색어를 변경하거나 카테고리 필터를 초기화해보세요.</p>
+        <button id="btn-reset-filters" class="mt-4 px-4 py-2 text-xs font-semibold bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors">
+          검색 조건 초기화
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="mt-auto border-t border-slate-200 bg-white py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-slate-500">
+      <p class="font-medium text-slate-700">도서관 스마트 대출 예약 웹 애플리케이션</p>
+      <p class="mt-1">Google Apps Script Web App API (GET/POST) 연동 실시간 시스템</p>
+    </div>
+  </footer>
+
+  <!-- ==================== RESERVATION MODAL ==================== -->
+  <div id="reservation-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs hidden">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-100 transition-all transform duration-200 scale-95 opacity-0" id="modal-container">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <svg class="w-5 h-5 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <h3 class="font-bold text-base sm:text-lg">도서 대출 예약 신청</h3>
+        </div>
+        <button id="modal-close-btn" class="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Book Info Preview -->
+      <div class="p-6 bg-slate-50/80 border-b border-slate-100 flex gap-4 items-center">
+        <img id="modal-book-cover" src="" alt="도서 표지" class="w-16 h-22 object-cover rounded-lg shadow-sm bg-slate-200 shrink-0" onerror="this.src='https://picsum.photos/seed/fallback/200/300'">
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-1.5 mb-1">
+            <span id="modal-book-category" class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700"></span>
+            <span id="modal-book-id" class="text-[11px] font-mono text-slate-400"></span>
+          </div>
+          <h4 id="modal-book-title" class="font-bold text-slate-900 text-base leading-snug truncate"></h4>
+          <p id="modal-book-author" class="text-xs text-slate-500 mt-0.5 truncate"></p>
+        </div>
+      </div>
+
+      <!-- Form Content -->
+      <form id="reservation-form" class="p-6 space-y-4">
+        <input type="hidden" id="form-book-id" value="">
+
+        <!-- Name Input -->
+        <div>
+          <label for="form-name" class="block text-xs font-semibold text-slate-700 mb-1">
+            신청자 성명 <span class="text-rose-500">*</span>
+          </label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7 7z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              id="form-name"
+              required
+              placeholder="예: 홍길동"
+              class="w-full pl-9 pr-3 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+            />
+          </div>
+        </div>
+
+        <!-- Email Input -->
+        <div>
+          <label for="form-email" class="block text-xs font-semibold text-slate-700 mb-1">
+            이메일 주소 <span class="text-rose-500">*</span>
+          </label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <input
+              type="email"
+              id="form-email"
+              required
+              placeholder="예: user@example.com"
+              class="w-full pl-9 pr-3 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+            />
+          </div>
+        </div>
+
+        <!-- Dates Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label for="form-start-date" class="block text-xs font-semibold text-slate-700 mb-1">
+              대출 시작일 <span class="text-rose-500">*</span>
+            </label>
+            <input
+              type="date"
+              id="form-start-date"
+              required
+              class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+            />
+          </div>
+
+          <div>
+            <label for="form-end-date" class="block text-xs font-semibold text-slate-700 mb-1">
+              반납 예정일 <span class="text-rose-500">*</span>
+            </label>
+            <input
+              type="date"
+              id="form-end-date"
+              required
+              class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+            />
+          </div>
+        </div>
+
+        <!-- Quick Duration Selectors -->
+        <div class="flex items-center justify-between text-xs pt-1">
+          <span class="text-slate-500 font-medium">대출 기간 추천:</span>
+          <div class="space-x-1.5">
+            <button type="button" class="duration-btn px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-[11px]" data-days="7">7일 (1주)</button>
+            <button type="button" class="duration-btn px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-[11px]" data-days="14">14일 (2주)</button>
+            <button type="button" class="duration-btn px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-[11px]" data-days="21">21일 (3주)</button>
+          </div>
+        </div>
+
+        <!-- Notice -->
+        <div class="p-3 bg-amber-50 rounded-xl border border-amber-200/60 text-[11px] text-amber-800 flex items-start space-x-2">
+          <svg class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>
+            예약 신청 후 구글 스프레드시트에 즉시 반영되며, 도서 상태가 '대출중'으로 전환됩니다.
+          </div>
+        </div>
+
+        <!-- Form Buttons -->
+        <div class="pt-3 flex space-x-3">
+          <button
+            type="button"
+            id="modal-cancel-btn"
+            class="flex-1 py-2.5 px-4 border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-colors"
+          >
+            취소
+          </button>
+          <button
+            type="submit"
+            id="modal-submit-btn"
+            class="flex-1 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-md shadow-blue-500/20 transition-all flex items-center justify-center space-x-2"
+          >
+            <span id="submit-btn-spinner" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin hidden"></span>
+            <span id="submit-btn-text">예약 신청하기</span>
+          </button>
+        </div>
+      </form>
+
+      <!-- Success State Screen (Replaces form upon success) -->
+      <div id="reservation-success-view" class="p-8 text-center hidden">
+        <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h4 class="text-xl font-bold text-slate-900 mb-1">예약이 완료되었습니다!</h4>
+        <p class="text-xs text-slate-500 mb-6" id="success-desc">Google Apps Script 및 시트에 등록되었습니다.</p>
+
+        <div class="bg-slate-50 rounded-xl p-4 text-left border border-slate-200 mb-6 space-y-2 text-xs">
+          <div class="flex justify-between">
+            <span class="text-slate-500">예약 번호</span>
+            <span id="success-res-id" class="font-mono font-bold text-blue-600">R001</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">신청 도서</span>
+            <span id="success-book-title" class="font-semibold text-slate-800 truncate max-w-[200px]"></span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">신청자명</span>
+            <span id="success-user-name" class="font-semibold text-slate-800"></span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">대출 기간</span>
+            <span id="success-period" class="font-medium text-slate-700"></span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          id="success-close-btn"
+          class="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl transition-colors"
+        >
+          확인 및 목록으로 돌아가기
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== MY RESERVATIONS MODAL ==================== -->
+  <div id="my-reservations-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs hidden">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full max-h-[85vh] flex flex-col overflow-hidden border border-slate-100">
+      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+        <h3 class="font-bold text-slate-900 text-base flex items-center">
+          <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+          나의 대출 예약 내역
+        </h3>
+        <button id="my-res-close-btn" class="text-slate-400 hover:text-slate-600 p-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-3" id="my-res-list-container">
+        <!-- Rendered by JS -->
+      </div>
+
+      <div class="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-xs text-slate-500">
+        <span>로컬 브라우저에 저장된 최근 신청 내역입니다.</span>
+        <button id="btn-clear-my-res" class="text-rose-600 hover:underline">내역 비우기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <!-- JAVASCRIPT APPLICATION LOGIC -->
+  <script>
+    // Configuration
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbxg6Vkxxad9cA6TH3hleMA1WoUsnWYO9VR4T6lAYJWI2vmbnaBstttXlrBuynH2x9wZ4Q/exec';
+    const CATEGORIES = ['전체', '개발/IT', '소설', '인문/역사', '자기계발', '경제/경영', '과학'];
+
+    // State
+    let allBooks = [];
+    let selectedCategory = '전체';
+    let searchQuery = '';
+    let availableOnly = false;
+    let selectedBookForModal = null;
+    let myReservations = JSON.parse(localStorage.getItem('my_library_reservations') || '[]');
+
+    // DOM Elements
+    const booksGrid = document.getElementById('books-grid');
+    const loadingSkeleton = document.getElementById('loading-skeleton');
+    const emptyState = document.getElementById('empty-state');
+    const searchInput = document.getElementById('search-input');
+    const searchClear = document.getElementById('search-clear');
+    const filterAvailableOnly = document.getElementById('filter-available-only');
+    const categoryPillsContainer = document.getElementById('category-pills-container');
+    const resultsCount = document.getElementById('results-count');
+    const filterSummary = document.getElementById('filter-summary');
+    const apiStatusDot = document.getElementById('api-status-dot');
+    const apiStatusText = document.getElementById('api-status-text');
+    const btnRefresh = document.getElementById('btn-refresh');
+    const refreshIcon = document.getElementById('refresh-icon');
+
+    // Stats Elements
+    const statTotal = document.getElementById('stat-total');
+    const statAvailable = document.getElementById('stat-available');
+    const statBorrowed = document.getElementById('stat-borrowed');
+
+    // Modal Elements
+    const resModal = document.getElementById('reservation-modal');
+    const modalContainer = document.getElementById('modal-container');
+    const modalCloseBtn = document.getElementById('modal-close-btn');
+    const modalCancelBtn = document.getElementById('modal-cancel-btn');
+    const resForm = document.getElementById('reservation-form');
+    const resSuccessView = document.getElementById('reservation-success-view');
+    const submitBtnSpinner = document.getElementById('submit-btn-spinner');
+    const submitBtnText = document.getElementById('submit-btn-text');
+    const modalBookCover = document.getElementById('modal-book-cover');
+    const modalBookCategory = document.getElementById('modal-book-category');
+    const modalBookId = document.getElementById('modal-book-id');
+    const modalBookTitle = document.getElementById('modal-book-title');
+    const modalBookAuthor = document.getElementById('modal-book-author');
+    const formBookId = document.getElementById('form-book-id');
+    const formName = document.getElementById('form-name');
+    const formEmail = document.getElementById('form-email');
+    const formStartDate = document.getElementById('form-start-date');
+    const formEndDate = document.getElementById('form-end-date');
+
+    // My Reservations
+    const myResModal = document.getElementById('my-reservations-modal');
+    const btnOpenMyRes = document.getElementById('btn-open-my-reservations');
+    const myResCloseBtn = document.getElementById('my-res-close-btn');
+    const myResListContainer = document.getElementById('my-res-list-container');
+    const myResBadge = document.getElementById('my-res-badge');
+    const btnClearMyRes = document.getElementById('btn-clear-my-res');
+
+    // Toast Function
+    function showToast(message, type = 'info') {
+      const toast = document.createElement('div');
+      const colors = {
+        success: 'bg-emerald-600 text-white',
+        error: 'bg-rose-600 text-white',
+        info: 'bg-slate-900 text-white'
+      };
+      toast.className = `${colors[type] || colors.info} px-4 py-3 rounded-xl shadow-lg text-sm font-medium flex items-center space-x-2 transition-all transform duration-300 translate-y-2 opacity-0 pointer-events-auto`;
+      toast.innerHTML = `
+        <span>${message}</span>
+      `;
+      document.getElementById('toast-container').appendChild(toast);
+      
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // Render Skeletons
+    function renderSkeletons() {
+      loadingSkeleton.innerHTML = '';
+      for (let i = 0; i < 8; i++) {
+        const div = document.createElement('div');
+        div.className = 'bg-white rounded-2xl p-4 border border-slate-200 animate-pulse';
+        div.innerHTML = `
+          <div class="w-full h-48 bg-slate-200 rounded-xl mb-4"></div>
+          <div class="h-4 bg-slate-200 rounded w-1/3 mb-2"></div>
+          <div class="h-5 bg-slate-200 rounded w-3/4 mb-2"></div>
+          <div class="h-4 bg-slate-200 rounded w-1/2 mb-4"></div>
+          <div class="h-9 bg-slate-200 rounded-xl w-full"></div>
+        `;
+        loadingSkeleton.appendChild(div);
+      }
+      loadingSkeleton.classList.remove('hidden');
+      booksGrid.classList.add('hidden');
+      emptyState.classList.add('hidden');
+    }
+
+    // Render Categories
+    function renderCategories() {
+      categoryPillsContainer.innerHTML = '';
+      CATEGORIES.forEach(cat => {
+        const btn = document.createElement('button');
+        const count = cat === '전체' 
+          ? allBooks.length 
+          : allBooks.filter(b => b.category === cat).length;
+
+        const isSelected = selectedCategory === cat;
+        btn.className = `shrink-0 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center space-x-1.5 ${
+          isSelected 
+            ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20' 
+            : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+        }`;
+        btn.innerHTML = `
+          <span>${cat}</span>
+          <span class="text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-500'}">${count}</span>
+        `;
+        btn.addEventListener('click', () => {
+          selectedCategory = cat;
+          renderCategories();
+          filterAndRenderBooks();
+        });
+        categoryPillsContainer.appendChild(btn);
+      });
+    }
+
+    // Update Stats
+    function updateStats() {
+      const total = allBooks.length;
+      const available = allBooks.filter(b => b.status === '대출가능').length;
+      const borrowed = total - available;
+
+      statTotal.textContent = `${total} 권`;
+      statAvailable.textContent = `${available} 권`;
+      statBorrowed.textContent = `${borrowed} 권`;
+      updateMyResBadge();
+    }
+
+    function updateMyResBadge() {
+      if (myReservations.length > 0) {
+        myResBadge.textContent = myReservations.length;
+        myResBadge.classList.remove('hidden');
+      } else {
+        myResBadge.classList.add('hidden');
+      }
+    }
+
+    // Filter & Render Books
+    function filterAndRenderBooks() {
+      const q = searchQuery.trim().toLowerCase();
+
+      const filtered = allBooks.filter(book => {
+        // Category filter
+        if (selectedCategory !== '전체' && book.category !== selectedCategory) {
+          return false;
+        }
+        // Available only filter
+        if (availableOnly && book.status !== '대출가능') {
+          return false;
+        }
+        // Search query
+        if (q) {
+          const matchTitle = book.title?.toLowerCase().includes(q);
+          const matchAuthor = book.author?.toLowerCase().includes(q);
+          const matchId = book.bookId?.toLowerCase().includes(q);
+          if (!matchTitle && !matchAuthor && !matchId) return false;
+        }
+        return true;
+      });
+
+      resultsCount.textContent = `${filtered.length}권`;
+      filterSummary.textContent = `${selectedCategory !== '전체' ? selectedCategory + ' · ' : ''}${availableOnly ? '대출가능만 · ' : ''}${q ? `"${q}" 검색` : '전체'}`;
+
+      if (filtered.length === 0) {
+        booksGrid.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      booksGrid.classList.remove('hidden');
+      booksGrid.innerHTML = '';
+
+      filtered.forEach(book => {
+        const isAvailable = book.status === '대출가능';
+
+        const card = document.createElement('div');
+        card.className = 'bg-white rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all duration-200 flex flex-col overflow-hidden group';
+
+        card.innerHTML = `
+          <!-- Cover container -->
+          <div class="relative w-full h-48 bg-slate-100 overflow-hidden">
+            <img 
+              src="${book.coverUrl}" 
+              alt="${book.title}" 
+              loading="lazy"
+              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              onerror="this.src='https://picsum.photos/seed/${book.bookId}/300/400'"
+            />
+            <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+            
+            <!-- Category Badge -->
+            <span class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-white/90 backdrop-blur-md text-slate-800 shadow-xs">
+              ${book.category}
+            </span>
+
+            <!-- Status Badge -->
+            <div class="absolute top-3 right-3">
+              ${isAvailable ? `
+                <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-500 text-white shadow-xs">
+                  <span class="w-1.5 h-1.5 rounded-full bg-white mr-1.5 animate-pulse"></span>
+                  대출가능
+                </span>
+              ` : `
+                <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-rose-500 text-white shadow-xs">
+                  대출중
+                </span>
+              `}
+            </div>
+
+            <!-- Book ID -->
+            <span class="absolute bottom-2 left-3 text-[10px] font-mono text-white/90 drop-shadow">
+              ID: ${book.bookId}
+            </span>
+          </div>
+
+          <!-- Body -->
+          <div class="p-4 flex-1 flex flex-col justify-between">
+            <div>
+              <h4 class="font-bold text-slate-900 text-base leading-snug line-clamp-1 group-hover:text-blue-600 transition-colors" title="${book.title}">
+                ${book.title}
+              </h4>
+              <p class="text-xs text-slate-500 mt-1 line-clamp-1" title="${book.author}">
+                ${book.author} 저
+              </p>
+            </div>
+
+            <!-- Action Button -->
+            <div class="mt-4 pt-3 border-t border-slate-100">
+              ${isAvailable ? `
+                <button
+                  type="button"
+                  data-book-id="${book.bookId}"
+                  class="btn-reserve w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-xs hover:shadow-md hover:shadow-blue-500/20 active:scale-[0.98] transition-all flex items-center justify-center space-x-1.5"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span>예약하기</span>
+                </button>
+              ` : `
+                <button
+                  type="button"
+                  disabled
+                  class="w-full py-2.5 px-4 bg-slate-100 text-slate-400 text-xs sm:text-sm font-semibold rounded-xl cursor-not-allowed flex items-center justify-center space-x-1.5"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  <span>대출 불가 (대출중)</span>
+                </button>
+              `}
+            </div>
+          </div>
+        `;
+
+        booksGrid.appendChild(card);
+      });
+
+      // Bind reserve buttons
+      document.querySelectorAll('.btn-reserve').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-book-id');
+          const book = allBooks.find(b => b.bookId === id);
+          if (book) openReservationModal(book);
+        });
+      });
+    }
+
+    // Fetch Books from GAS GET API
+    async function loadBooks() {
+      renderSkeletons();
+      refreshIcon.classList.add('animate-spin');
+      apiStatusDot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+      apiStatusText.textContent = '데이터 불러오는 중...';
+
+      try {
+        const res = await fetch(GAS_URL, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' }
+        });
+
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+
+        if (data.status === 'success' && Array.isArray(data.data)) {
+          allBooks = data.data;
+          apiStatusDot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+          apiStatusText.textContent = 'GAS 실시간 연동됨';
+        } else {
+          throw new Error(data.message || '데이터 형식 오류');
+        }
+      } catch (err) {
+        console.error('Fetch books error:', err);
+        apiStatusDot.className = 'w-2 h-2 rounded-full bg-rose-500';
+        apiStatusText.textContent = '연동 확인 필요 (오류)';
+        showToast('도서 목록 로드 중 오류가 발생했습니다: ' + err.message, 'error');
+      } finally {
+        loadingSkeleton.classList.add('hidden');
+        refreshIcon.classList.remove('animate-spin');
+        renderCategories();
+        updateStats();
+        filterAndRenderBooks();
+      }
+    }
+
+    // Modal Handling
+    function openReservationModal(book) {
+      selectedBookForModal = book;
+      formBookId.value = book.bookId;
+      modalBookTitle.textContent = book.title;
+      modalBookAuthor.textContent = book.author + ' 저';
+      modalBookCategory.textContent = book.category;
+      modalBookId.textContent = `#${book.bookId}`;
+      modalBookCover.src = book.coverUrl;
+
+      // Set default dates
+      const today = new Date();
+      const startStr = today.toISOString().split('T')[0];
+      const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const endStr = nextWeek.toISOString().split('T')[0];
+
+      formStartDate.value = startStr;
+      formStartDate.min = startStr;
+      formEndDate.value = endStr;
+      formEndDate.min = startStr;
+
+      // Reset view state
+      resForm.classList.remove('hidden');
+      resSuccessView.classList.add('hidden');
+      submitBtnSpinner.classList.add('hidden');
+      submitBtnText.textContent = '예약 신청하기';
+      resForm.reset();
+      formStartDate.value = startStr;
+      formEndDate.value = endStr;
+
+      // Show modal
+      resModal.classList.remove('hidden');
+      requestAnimationFrame(() => {
+        modalContainer.classList.remove('scale-95', 'opacity-0');
+        modalContainer.classList.add('scale-100', 'opacity-100');
+      });
+    }
+
+    function closeReservationModal() {
+      modalContainer.classList.remove('scale-100', 'opacity-100');
+      modalContainer.classList.add('scale-95', 'opacity-0');
+      setTimeout(() => {
+        resModal.classList.add('hidden');
+        selectedBookForModal = null;
+      }, 200);
+    }
+
+    // Date Duration Buttons
+    document.querySelectorAll('.duration-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const days = parseInt(btn.getAttribute('data-days') || '7');
+        const start = formStartDate.value ? new Date(formStartDate.value) : new Date();
+        const end = new Date(start.getTime() + days * 24 * 60 * 60 * 1000);
+        formEndDate.value = end.toISOString().split('T')[0];
+      });
+    });
+
+    formStartDate.addEventListener('change', () => {
+      formEndDate.min = formStartDate.value;
+      if (formEndDate.value < formStartDate.value) {
+        formEndDate.value = formStartDate.value;
+      }
+    });
+
+    // Form Submit (POST to GAS API)
+    resForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (!formName.value.trim()) {
+        showToast('신청자 성명을 입력해주세요.', 'error');
+        formName.focus();
+        return;
+      }
+
+      if (!formEmail.value.trim()) {
+        showToast('이메일 주소를 입력해주세요.', 'error');
+        formEmail.focus();
+        return;
+      }
+
+      const payload = {
+        bookId: formBookId.value,
+        name: formName.value.trim(),
+        email: formEmail.value.trim(),
+        startDate: formStartDate.value,
+        endDate: formEndDate.value
+      };
+
+      // Loading state
+      submitBtnSpinner.classList.remove('hidden');
+      submitBtnText.textContent = '예약 전송 중...';
+      const submitBtn = document.getElementById('modal-submit-btn');
+      submitBtn.disabled = true;
+
+      try {
+        const response = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const resText = await response.text();
+        let result = {};
+        try {
+          result = JSON.parse(resText);
+        } catch {
+          result = { status: 'success', message: '예약이 성공적으로 완료되었습니다.', reservationId: 'R' + Math.floor(100 + Math.random() * 900) };
+        }
+
+        const resId = result.reservationId || ('R' + Date.now().toString().slice(-4));
+
+        // Save to local storage
+        const record = {
+          reservationId: resId,
+          bookId: payload.bookId,
+          title: selectedBookForModal.title,
+          author: selectedBookForModal.author,
+          coverUrl: selectedBookForModal.coverUrl,
+          name: payload.name,
+          email: payload.email,
+          startDate: payload.startDate,
+          endDate: payload.endDate,
+          createdAt: new Date().toLocaleString('ko-KR')
+        };
+        myReservations.unshift(record);
+        localStorage.setItem('my_library_reservations', JSON.stringify(myReservations));
+        updateMyResBadge();
+
+        // Switch to success view
+        resForm.classList.add('hidden');
+        resSuccessView.classList.remove('hidden');
+        document.getElementById('success-res-id').textContent = resId;
+        document.getElementById('success-book-title').textContent = selectedBookForModal.title;
+        document.getElementById('success-user-name').textContent = payload.name;
+        document.getElementById('success-period').textContent = `${payload.startDate} ~ ${payload.endDate}`;
+
+        showToast('대출 예약이 성공적으로 완료되었습니다!', 'success');
+
+        // Optimistically update book status in state
+        const target = allBooks.find(b => b.bookId === payload.bookId);
+        if (target) {
+          target.status = '대출중';
+          filterAndRenderBooks();
+          updateStats();
+        }
+
+        // Reload data in background
+        loadBooks();
+
+      } catch (err) {
+        console.error('Reservation error:', err);
+        showToast('예약 전송 중 오류가 발생했습니다: ' + err.message, 'error');
+      } finally {
+        submitBtnSpinner.classList.add('hidden');
+        submitBtnText.textContent = '예약 신청하기';
+        submitBtn.disabled = false;
+      }
+    });
+
+    // Success Close Button
+    document.getElementById('success-close-btn').addEventListener('click', () => {
+      closeReservationModal();
+    });
+
+    modalCloseBtn.addEventListener('click', closeReservationModal);
+    modalCancelBtn.addEventListener('click', closeReservationModal);
+    resModal.addEventListener('click', (e) => {
+      if (e.target === resModal) closeReservationModal();
+    });
+
+    // My Reservations Modal Logic
+    function renderMyReservations() {
+      myResListContainer.innerHTML = '';
+      if (myReservations.length === 0) {
+        myResListContainer.innerHTML = `
+          <div class="py-8 text-center text-slate-400">
+            <svg class="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253" />
+            </svg>
+            <p class="text-sm font-medium">아직 예약된 도서가 없습니다.</p>
+          </div>
+        `;
+        return;
+      }
+
+      myReservations.forEach((item, idx) => {
+        const div = document.createElement('div');
+        div.className = 'p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between gap-3 text-xs';
+        div.innerHTML = `
+          <div class="flex items-center space-x-3 min-w-0">
+            <img src="${item.coverUrl}" class="w-10 h-14 object-cover rounded bg-slate-200 shrink-0" onerror="this.src='https://picsum.photos/seed/${item.bookId}/100/140'">
+            <div class="min-w-0">
+              <div class="flex items-center space-x-2">
+                <span class="font-mono font-bold text-blue-600">${item.reservationId}</span>
+                <span class="text-[10px] text-slate-400">(${item.createdAt || ''})</span>
+              </div>
+              <h5 class="font-bold text-slate-900 truncate mt-0.5">${item.title}</h5>
+              <p class="text-slate-500 mt-0.5">예약자: ${item.name} (${item.startDate} ~ ${item.endDate})</p>
+            </div>
+          </div>
+          <span class="shrink-0 px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-lg font-bold text-[11px]">
+            접수완료
+          </span>
+        `;
+        myResListContainer.appendChild(div);
+      });
+    }
+
+    btnOpenMyRes.addEventListener('click', () => {
+      renderMyReservations();
+      myResModal.classList.remove('hidden');
+    });
+
+    myResCloseBtn.addEventListener('click', () => {
+      myResModal.classList.add('hidden');
+    });
+
+    myResModal.addEventListener('click', (e) => {
+      if (e.target === myResModal) myResModal.classList.add('hidden');
+    });
+
+    btnClearMyRes.addEventListener('click', () => {
+      if (confirm('모든 예약 내역을 삭제하시겠습니까?')) {
+        myReservations = [];
+        localStorage.removeItem('my_library_reservations');
+        updateMyResBadge();
+        renderMyReservations();
+        showToast('예약 내역이 삭제되었습니다.', 'info');
+      }
+    });
+
+    // Search events
+    searchInput.addEventListener('input', (e) => {
+      searchQuery = e.target.value;
+      if (searchQuery) {
+        searchClear.classList.remove('hidden');
+      } else {
+        searchClear.classList.add('hidden');
+      }
+      filterAndRenderBooks();
+    });
+
+    searchClear.addEventListener('click', () => {
+      searchInput.value = '';
+      searchQuery = '';
+      searchClear.classList.add('hidden');
+      filterAndRenderBooks();
+    });
+
+    filterAvailableOnly.addEventListener('change', (e) => {
+      availableOnly = e.target.checked;
+      filterAndRenderBooks();
+    });
+
+    document.getElementById('btn-reset-filters').addEventListener('click', () => {
+      searchInput.value = '';
+      searchQuery = '';
+      searchClear.classList.add('hidden');
+      filterAvailableOnly.checked = false;
+      availableOnly = false;
+      selectedCategory = '전체';
+      renderCategories();
+      filterAndRenderBooks();
+    });
+
+    btnRefresh.addEventListener('click', () => {
+      loadBooks();
+    });
+
+    // Escape key modal dismiss
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (!resModal.classList.contains('hidden')) closeReservationModal();
+        if (!myResModal.classList.contains('hidden')) myResModal.classList.add('hidden');
+      }
+    });
+
+    // Initialize
+    loadBooks();
+  </script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "name": "도서관 스마트 대출 예약 시스템",
+  "description": "Google Apps Script와 실시간 연동되는 도서관 도서 검색 및 대출 예약 웹 애플리케이션",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
